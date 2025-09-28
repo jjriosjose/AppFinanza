@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mi Presupuesto Personal</title>
+<title>Mi Presupuesto Personal - Escritorio (v2)</title>
 <style>
   :root{
     --bg:#0f172a; --bg-soft:#111827; --panel:#111827; --muted:#94a3b8; --border:#1f2937; --txt:#e5e7eb;
@@ -53,6 +53,30 @@
   .hidden{display:none !important}
   @media (max-width:1200px){ .cards{grid-template-columns:1fr} .grid-2{grid-template-columns:1fr} .app{grid-template-columns:220px 1fr} }
   #errorBar{position:fixed; left:20px; right:20px; bottom:16px; background:#7f1d1d; color:#fff; border:1px solid #991b1b; border-radius:10px; padding:8px 12px; display:none; z-index:9999}
+
+/* ===== Responsive Enhancements (mobile-first) ===== */
+@media (max-width: 1024px){
+  .app{ grid-template-columns: 1fr; grid-template-areas: "top" "main"; }
+  .nav{ display:none; }
+  header{ padding: 8px 12px; }
+  .main{ padding: 12px; }
+  .cards{ grid-template-columns: 1fr; }
+  .grid-2, .grid-3{ grid-template-columns: 1fr; }
+  .btn{ padding: 12px 14px; border-radius: 12px; }
+  input, select, textarea{ padding: 12px 14px; border-radius: 12px; }
+  table{ display:block; width:100%; overflow-x:auto; border-radius:12px; }
+  th,td{ white-space: nowrap; }
+  dialog{ width:96vw; }
+  /* Bottom nav visible */
+  .bottom-nav{ display:flex; position:fixed; bottom:0; left:0; right:0; background:var(--bg-soft); border-top:1px solid var(--border); z-index:50; }
+  .bottom-nav button{ flex:1; all:unset; text-align:center; padding:12px 4px; cursor:pointer; color:var(--txt); }
+  .bottom-nav button.active{ background:rgba(255,255,255,.04); }
+  body{ padding-bottom: 62px; } /* space for bottom nav */
+}
+@media (min-width: 1025px){
+  .bottom-nav{ display:none; }
+}
+
 </style>
 
 <link rel="manifest" href="manifest.webmanifest">
@@ -67,11 +91,11 @@
     <div style="display:flex;align-items:center;gap:12px">
       <div class="logo">MP</div>
       <div>
-        <div style="font-weight:800">Mi Presupuesto Personal – Escritorio</div>
+        <div style="font-weight:800"><span id="appTitle">Mi Presupuesto Personal – Escritorio</span> <span class="chip" id="appVersion">v jr.1.1</span></div>
         <div class="chip" id="currentMonthChip"></div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px"><button class="btn primary" id="installBtn" style="display:none">📲 Instalar</button>
+    <div style="display:flex;align-items:center;gap:8px"><button class="btn" id="editNameBtn" title="Cambiar nombre de la app">✏️ Nombre</button><button class="btn primary" id="installBtn" style="display:none">📲 Instalar</button>
       <button class="btn ghost" id="toggleThemeBtn">🌓 Tema</button>
       <button class="btn" id="importBtn">📥 Importar</button>
       <button class="btn" id="exportBtn">📤 Exportar</button>
@@ -223,6 +247,18 @@
       </div>
     </section>
   </main>
+
+<!-- Navegación inferior (solo móvil) -->
+<nav class="bottom-nav">
+  <button data-target="view-dashboard">📊</button>
+  <button data-target="view-transactions">🧾</button>
+  <button data-target="view-budget">🎯</button>
+  <button data-target="view-history">📚</button>
+  <button data-target="view-goals">💰</button>
+  <button data-target="view-reports">📈</button>
+  <button data-target="view-settings">⚙️</button>
+</nav>
+
 </div>
 
 <!-- Diálogos -->
@@ -270,6 +306,19 @@
   <div class="modal-foot"><button class="btn ghost" onclick="closeDialog('dlgGoal')">Cancelar</button><button class="btn primary" id="goalSaveBtn">Guardar</button></div>
 </dialog>
 
+<dialog id="dlgAppName">
+  <div class="modal-head"><strong>Nombre de la aplicación</strong><button class="btn ghost" onclick="closeDialog('dlgAppName')">✖</button></div>
+  <div class="modal-body">
+    <label>Escribe el nombre que deseas mostrar en el encabezado</label>
+    <input id="appNameInput" placeholder="Mi Presupuesto Personal">
+    <small>Este nombre se guardará en el dispositivo (localStorage) y se puede cambiar cuando quieras.</small>
+  </div>
+  <div class="modal-foot">
+    <button class="btn ghost" onclick="closeDialog('dlgAppName')">Cancelar</button>
+    <button class="btn primary" id="appNameSaveBtn">Guardar</button>
+  </div>
+</dialog>
+
 <div id="errorBar"></div>
 
 <script>
@@ -303,7 +352,7 @@ function showError(msg){ const bar = $('#errorBar'); bar.textContent = msg; bar.
 
 // ===== Modelo =====
 const defaultData = {
-  settings:{currency:'RD$', theme:'dark'},
+  settings:{currency:'RD$', theme:'dark', appName:'Mi Presupuesto Personal – Escritorio', version:'v jr.1.1', promptedName:false},
   categories:[
     {id:uid(), name:'Salario', type:'income'},
     {id:uid(), name:'Ventas', type:'income'},
@@ -372,6 +421,9 @@ function renderAll(){
   try{
     document.body.setAttribute('data-theme', app.state.settings.theme || 'dark');
     $('#currentMonthChip').textContent = monthLabel(yyyymm(new Date()));
+    const t = app.state.settings.appName || 'Mi Presupuesto Personal – Escritorio';
+    const v = app.state.settings.version || 'v jr.1.1';
+    const el = document.getElementById('appTitle'); if(el) el.textContent = t; const ev = document.getElementById('appVersion'); if(ev) ev.textContent = v;
     renderDashboard(); renderTransactions(); renderBudget(); renderHistory(); renderGoals(); renderReports(); renderSettings();
   }catch(e){ console.error(e); showError('Error de render. Revisa la consola.'); }
 }
@@ -756,6 +808,10 @@ function bindEvents(){
   on('#btnExportJson','click', exportToJson);
   on('#btnImportJson','click', importFromJson);
   on('#btnFactoryReset','click', factoryReset);
+  // Editar nombre de la app
+  on('#editNameBtn','click', ()=>{ const input=$('#appNameInput'); if(input){ input.value = app.state.settings.appName || ''; } openDialog('dlgAppName'); });
+  on('#appNameSaveBtn','click', ()=>{ const val = ($('#appNameInput').value||'').trim(); if(val){ app.state.settings.appName = val; app.state.settings.promptedName = true; saveState(); closeDialog('dlgAppName'); } });
+
 
   on('#btnAddCat','click', ()=>{ app.editing.catId=null; $('#catName').value=''; $('#catType').value='expense'; openDialog('dlgCat'); });
   on('#catSaveBtn','click', ()=>{
@@ -879,12 +935,43 @@ on('#installBtn','click', async ()=>{
   const ib = document.getElementById('installBtn'); if (ib) ib.style.display='none';
 });
 
+
+// ===== Bottom Nav (mobile) sync with main nav =====
+function setupBottomNav(){
+  const btns = document.querySelectorAll('.bottom-nav button');
+  btns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = btn.getAttribute('data-target');
+      const navIdx = views.findIndex(v=>v.id===target);
+      if(navIdx>=0){
+        const sidebarBtn = document.querySelectorAll('#navButtons button')[navIdx];
+        showView(target, sidebarBtn);
+        // update bottom active
+        document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+      }else{
+        showView(target);
+      }
+    });
+  });
+  // default active
+  const first = document.querySelector('.bottom-nav button[data-target="'+views[0].id+'"]');
+  if(first) first.classList.add('active');
+}
+
 // ===== Inicio =====
 function init(){
   app.state = loadState();
   document.body.setAttribute('data-theme', app.state.settings.theme || 'dark');
   if($('#txDate')) $('#txDate').value = new Date().toISOString().slice(0,10);
-  setupNav(); bindEvents(); renderAll();
+  setupNav(); bindEvents(); renderAll(); setupBottomNav();
+  // Solicitar nombre al abrir si no se ha configurado
+  if(!app.state.settings.promptedName){
+    const input = document.getElementById('appNameInput');
+    if(input){ input.value = app.state.settings.appName || 'Mi Presupuesto Personal – Escritorio'; }
+    openDialog('dlgAppName');
+  }
+
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>
